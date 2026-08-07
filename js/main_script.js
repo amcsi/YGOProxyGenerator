@@ -148,11 +148,17 @@ function generateProxies(){
 		if(regex_result){
 			var amount = regex_result[1] === undefined ? 1 : parseInt(regex_result[1]);
 			var versionNumber = regex_result[3] === undefined ? 0 : parseInt(regex_result[3]);
+			var cardToken = regex_result[2];
+			var directUrl = YGODecklistParse.extractDirectImageUrl(cardToken);
 			console.log(lines[i]);
 			console.log(regex_result);
 			console.log("amount: " + amount);
 			console.log("versionNumber: " + versionNumber);
-			overallProcess = overallProcess.then(getImageUrl(regex_result[2], versionNumber))
+			console.log("directUrl: " + directUrl);
+			var fetchImage = directUrl
+				? (function(url){ return function(){ return requestArrayBuffer(url); }; })(directUrl)
+				: getImageUrl(cardToken, versionNumber);
+			overallProcess = overallProcess.then(fetchImage)
 			.then(
 				function(innerNumber){return (img)=>Promise.all([...Array(innerNumber).keys()].map(i => addImageToDoc(doc)(img)));}(amount),
 				function(line){return () => failedLines.push(line);} (regex_result[0])
