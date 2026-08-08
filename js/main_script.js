@@ -22,6 +22,7 @@ function request(url) {
 }
 
 function requestArrayBuffer(url) {
+	url = YGODecklistParse.rewriteYgoProDeckImageUrl(url);
 	console.log('requesting AB url:');
 	console.log(url);
   return new Promise(function (resolve, reject) {
