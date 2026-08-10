@@ -21,6 +21,29 @@ function request(url) {
   });
 }
 
+function requestWithTimeout(url, timeoutMs) {
+	console.log('requesting url:');
+	console.log(url);
+  return new Promise(function (resolve, reject) {
+    const xhr = new XMLHttpRequest();
+    xhr.timeout = timeoutMs;
+    xhr.onreadystatechange = function(e) {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          resolve(xhr.response)
+        } else {
+          reject(xhr.status)
+        }
+      }
+    }
+    xhr.ontimeout = function () {
+      reject('timeout')
+    }
+    xhr.open('get', url, true)
+    xhr.send();
+  });
+}
+
 function requestArrayBuffer(url) {
 	url = YGODecklistParse.rewriteYgoProDeckImageUrl(url);
 	console.log('requesting AB url:');
@@ -90,23 +113,55 @@ function addImageToDoc(doc){
 	};
 }
 
+var duelingBookIndexesPromise = null;
+
+function loadDuelingBookIndexes() {
+	if (!duelingBookIndexesPromise) {
+		duelingBookIndexesPromise = requestWithTimeout('https://static.duelingbook.com/cards.json', 60000)
+			.then(function (result) {
+				var data = JSON.parse(result);
+				if (!Array.isArray(data.cards)) {
+					return Promise.reject(new Error('invalid DuelingBook catalog shape'));
+				}
+				return YGODuelingBook.buildIndexes(data.cards);
+			});
+	}
+	return duelingBookIndexesPromise;
+}
+
+function getYgoProDeckImage(cardNameOrId, versionNumber){
+	return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?name=' + encodeURIComponent(cardNameOrId))
+	.catch((function(name){return (error)=>request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(name))})(cardNameOrId))
+	.catch(function(name){
+		return (error)=>
+		{
+			while(name.length < 8){
+			name = '0' +name;
+			}
+		return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(name));}
+	}(cardNameOrId))
+	.then(function (result){
+		var data = JSON.parse(result);
+		console.log('requesting result');
+		console.log(data);
+		return requestArrayBuffer(data.data[0].card_images[versionNumber].image_url);
+	});
+}
+
 function getImageUrl(cardNameOrId, versionNumber){
 	return ()=>{
-		return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?name=' + encodeURIComponent(cardNameOrId))
-		.catch((function(name){return (error)=>request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(name))})(cardNameOrId))
-		.catch(function(name){
-			return (error)=>
-			{
-				while(name.length < 8){
-				name = '0' +name;
-				}
-			return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(name));}
-		}(cardNameOrId))
-		.then(function (result){
-			var data = JSON.parse(result);
-			console.log('requesting result');
-			console.log(data);
-			return requestArrayBuffer(data.data[0].card_images[versionNumber].image_url);
+		return loadDuelingBookIndexes()
+		.then(function (indexes) {
+			var matches = YGODuelingBook.findMatches(indexes, cardNameOrId);
+			var row = matches[versionNumber];
+			if (!row) {
+				return Promise.reject('no-duelingbook-match');
+			}
+			console.log('duelingbook match', row);
+			return requestArrayBuffer(YGODuelingBook.imageUrlForRow(row));
+		})
+		.catch(function () {
+			return getYgoProDeckImage(cardNameOrId, versionNumber);
 		});
 	};
 }
