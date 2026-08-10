@@ -54,13 +54,13 @@
             Enter card name or 8-digit card-ID:<br>
             Dark Magician <br>
             74677422 <br> <br>
+            For card names/IDs, the app tries to grab images from DuelingBook first, then falls back to YGOProDeck.<br> <br>
             Set the quantity before the name/ID: <br>
             3 Cyber Dragon <br>
             3 89631139 <br> <br>
-			If there are multiple card versions available on <a href="https://db.ygoprodeck.com/api-guide/">YGOProDeck</a>,
-			you can set your desired version by an index in squared brackets after the cardname/ID and an additional whitespace: <br>
+			If there are multiple art versions, set the desired index in squared brackets after the cardname/ID (DuelingBook arts first, then YGOProDeck): <br>
 			3 Cyber Dragon [1]<br> <br>
-			You can also paste a direct image URL (skips YGOProDeck). An optional name before the URL is only for your own labelling:<br>
+			You can also paste a direct image URL (skips name/ID lookup). An optional name before the URL is only for your own labelling:<br>
 			https://example.com/art.jpg<br>
 			3 https://example.com/art.jpg<br>
 			Dark Magician https://example.com/art.jpg<br>
@@ -73,7 +73,7 @@
     </div>
     
     <footer>
-      Data provided by  <a href="https://db.ygoprodeck.com/api-guide/">YGOProDeck</a> </br>
+      Card images from <a href="https://www.duelingbook.com/">DuelingBook</a> (tried first) and <a href="https://db.ygoprodeck.com/api-guide/">YGOProDeck</a> </br>
       Your feedback and questions are much appreciated: <a href="https://github.com/amcsi/YGOProxyGenerator/issues">Give feedback or ask questions</a> </br>
       Originally created by <a href="https://dejauxvue.github.io/YGOProxyGenerator/html/index.html">Dejauxvue</a>
     </footer>
@@ -84,6 +84,7 @@
     <script src="../js/pdfkit.standalone.js">
     </script>
     <script src="../js/decklist_parse.js"></script>
+    <script src="../js/duelingbook.js"></script>
     <script src="../js/main_script.js">
     </script>
 
