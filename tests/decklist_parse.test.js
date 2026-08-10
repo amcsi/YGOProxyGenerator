@@ -43,7 +43,7 @@ describe('extractDirectImageUrl', () => {
 describe('rewriteYgoProDeckImageUrl', () => {
   const ygoUrl = 'https://images.ygoprodeck.com/images/cards/46986414.jpg';
   const cloudinaryUrl =
-    'https://res.cloudinary.com/drkxqkguu/image/upload/q_auto,f_auto,h_520/yugioh/46986414.jpg';
+    'https://res.cloudinary.com/drkxqkguu/image/upload/yugioh/46986414.jpg';
 
   it('rewrites YGOProDeck card images off the original host', () => {
     assert.equal(
