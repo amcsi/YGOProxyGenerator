@@ -1,10 +1,13 @@
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory();
+    module.exports = factory(root);
   } else {
-    root.YGOImageSource = factory();
+    root.YGOImageSource = factory(root);
   }
-})(typeof self !== 'undefined' ? self : this, function () {
+})(typeof self !== 'undefined' ? self : this, function (root) {
+  var db = root && root.YGODuelingBook;
+  var defaultFindMatches = db ? db.findMatches : null;
+  var defaultImageUrlForRow = db ? db.imageUrlForRow : null;
   function isMissingPasscode(value) {
     return value === undefined || value === null || value === '' || value === 0;
   }
@@ -37,9 +40,56 @@
     return 'https://images.ygoprodeck.com/images/cards/' + unpadded + '.jpg';
   }
 
+  function resolveAttempts(options) {
+    var cardNameOrId = options.cardNameOrId;
+    var artIndex = options.artIndex == null ? 0 : options.artIndex;
+    var preferDb = options.preferDb;
+    var override = options.override || null;
+    var dbIndexes = options.dbIndexes;
+    var findMatchesFn = options.findMatches || defaultFindMatches;
+    var imageUrlForRowFn = options.imageUrlForRow || defaultImageUrlForRow;
+
+    var effectivePreferDb =
+      override === 'db' ? true : override === 'ypd' ? false : preferDb;
+
+    var row = null;
+    if (dbIndexes && findMatchesFn) {
+      var matches = findMatchesFn(dbIndexes, cardNameOrId);
+      row = matches[artIndex] || null;
+    }
+
+    var dbAttempt = null;
+    if (row && imageUrlForRowFn) {
+      dbAttempt = { type: 'duelingbook', url: imageUrlForRowFn(row) };
+    }
+
+    var ypdAttempts = [];
+    if (artIndex === 0 && row) {
+      var direct = ypdDirectUrl(passcodeFromRow(row));
+      if (direct) {
+        ypdAttempts.push({ type: 'ygoprodeck-direct', url: direct });
+      }
+    }
+    ypdAttempts.push({
+      type: 'ygoprodeck-api',
+      cardNameOrId: cardNameOrId,
+      artIndex: artIndex
+    });
+
+    if (!dbIndexes) {
+      return [{ type: 'ygoprodeck-api', cardNameOrId: cardNameOrId, artIndex: artIndex }];
+    }
+
+    if (effectivePreferDb) {
+      return (dbAttempt ? [dbAttempt] : []).concat(ypdAttempts);
+    }
+    return ypdAttempts.concat(dbAttempt ? [dbAttempt] : []);
+  }
+
   return {
     passcodeFromRow: passcodeFromRow,
     unpadPasscodeForYpd: unpadPasscodeForYpd,
-    ypdDirectUrl: ypdDirectUrl
+    ypdDirectUrl: ypdDirectUrl,
+    resolveAttempts: resolveAttempts
   };
 });
