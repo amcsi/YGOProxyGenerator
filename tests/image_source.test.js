@@ -1,6 +1,9 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  PREFER_DB_STORAGE_KEY,
+  readPreferDb,
+  writePreferDb,
   passcodeFromRow,
   unpadPasscodeForYpd,
   ypdDirectUrl,
@@ -19,6 +22,44 @@ const fixtureCards = [
 ];
 const indexes = buildIndexes(fixtureCards);
 const dbOpts = { findMatches, imageUrlForRow };
+
+describe('preferDb storage', () => {
+  it('defaults to true when missing or corrupt', () => {
+    const mem = {
+      getItem: () => null
+    };
+    assert.equal(readPreferDb(mem), true);
+    assert.equal(
+      readPreferDb({ getItem: () => 'nope' }),
+      true
+    );
+  });
+
+  it('reads false only for string false', () => {
+    assert.equal(
+      readPreferDb({ getItem: () => 'false' }),
+      false
+    );
+    assert.equal(
+      readPreferDb({ getItem: () => 'true' }),
+      true
+    );
+  });
+
+  it('writes true/false strings under the spec key', () => {
+    const store = {};
+    const mem = {
+      getItem: (k) => store[k],
+      setItem: (k, v) => {
+        store[k] = v;
+      }
+    };
+    writePreferDb(mem, false);
+    assert.equal(store[PREFER_DB_STORAGE_KEY], 'false');
+    writePreferDb(mem, true);
+    assert.equal(store[PREFER_DB_STORAGE_KEY], 'true');
+  });
+});
 
 describe('passcodeFromRow', () => {
   it('prefers s over s2', () => {

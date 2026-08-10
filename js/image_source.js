@@ -8,6 +8,24 @@
   var db = root && root.YGODuelingBook;
   var defaultFindMatches = db ? db.findMatches : null;
   var defaultImageUrlForRow = db ? db.imageUrlForRow : null;
+  var PREFER_DB_STORAGE_KEY = 'preferDuelingBookImages';
+
+  function readPreferDb(storage) {
+    try {
+      var raw = storage.getItem(PREFER_DB_STORAGE_KEY);
+      if (raw === 'false') {
+        return false;
+      }
+      return true;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  function writePreferDb(storage, value) {
+    storage.setItem(PREFER_DB_STORAGE_KEY, value ? 'true' : 'false');
+  }
+
   function isMissingPasscode(value) {
     return value === undefined || value === null || value === '' || value === 0;
   }
@@ -87,6 +105,9 @@
   }
 
   return {
+    PREFER_DB_STORAGE_KEY: PREFER_DB_STORAGE_KEY,
+    readPreferDb: readPreferDb,
+    writePreferDb: writePreferDb,
     passcodeFromRow: passcodeFromRow,
     unpadPasscodeForYpd: unpadPasscodeForYpd,
     ypdDirectUrl: ypdDirectUrl,
