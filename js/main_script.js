@@ -148,22 +148,46 @@ function getYgoProDeckImage(cardNameOrId, versionNumber){
 	});
 }
 
-function getImageUrl(cardNameOrId, versionNumber){
-	return ()=>{
-		return loadDuelingBookIndexes()
-		.then(function (indexes) {
-			var matches = YGODuelingBook.findMatches(indexes, cardNameOrId);
-			var row = matches[versionNumber];
-			if (!row) {
-				return Promise.reject('no-duelingbook-match');
-			}
-			console.log('duelingbook match', row);
-			return requestArrayBuffer(YGODuelingBook.imageUrlForRow(row));
-		})
-		.catch(function () {
-			return getYgoProDeckImage(cardNameOrId, versionNumber);
-		});
-	};
+function runImageAttempts(attempts) {
+  var chain = Promise.reject(new Error('no-attempts'));
+  for (var i = 0; i < attempts.length; i++) {
+    (function (attempt) {
+      chain = chain.catch(function () {
+        if (attempt.type === 'duelingbook' || attempt.type === 'ygoprodeck-direct') {
+          return requestArrayBuffer(attempt.url);
+        }
+        if (attempt.type === 'ygoprodeck-api') {
+          return getYgoProDeckImage(attempt.cardNameOrId, attempt.artIndex);
+        }
+        return Promise.reject(new Error('unknown-attempt'));
+      });
+    })(attempts[i]);
+  }
+  return chain;
+}
+
+function getImageUrl(cardNameOrId, versionNumber, preferDb, override) {
+  return function () {
+    return loadDuelingBookIndexes()
+      .then(function (indexes) {
+        return indexes;
+      })
+      .catch(function () {
+        return null;
+      })
+      .then(function (indexes) {
+        var attempts = YGOImageSource.resolveAttempts({
+          cardNameOrId: cardNameOrId,
+          artIndex: versionNumber,
+          preferDb: preferDb,
+          override: override,
+          dbIndexes: indexes,
+          findMatches: YGODuelingBook.findMatches,
+          imageUrlForRow: YGODuelingBook.imageUrlForRow
+        });
+        return runImageAttempts(attempts);
+      });
+  };
 }
 
 
@@ -197,29 +221,39 @@ function generateProxies(){
 			continue;
 		}
 
-		
-		//var regex_id_nr = 
-		var regex_name = /^([1-9][0-9]* )?(.+?)(?: ?\[([0-9]+)\])?\s*$/;
-		var regex_result = regex_name.exec(lines[i].trim());
-		if(regex_result){
-			var amount = regex_result[1] === undefined ? 1 : parseInt(regex_result[1]);
-			var versionNumber = regex_result[3] === undefined ? 0 : parseInt(regex_result[3]);
-			var cardToken = regex_result[2];
-			var directUrl = YGODecklistParse.extractDirectImageUrl(cardToken);
-			console.log(lines[i]);
-			console.log(regex_result);
-			console.log("amount: " + amount);
-			console.log("versionNumber: " + versionNumber);
-			console.log("directUrl: " + directUrl);
+		var parsed = YGODecklistParse.parseDecklistLine(lines[i]);
+		if (parsed && (parsed.cardNameOrId !== '' || parsed.directUrl)) {
+			var amount = parsed.amount;
+			var versionNumber = parsed.artIndex;
+			var cardToken = parsed.cardNameOrId;
+			var directUrl = parsed.directUrl;
+			var preferDb = YGOImageSource.readPreferDb(localStorage);
+			// Temporary until Task 7 wires checkbox: reading storage is correct default path
 			var fetchImage = directUrl
-				? (function(url){ return function(){ return requestArrayBuffer(url); }; })(directUrl)
-				: getImageUrl(cardToken, versionNumber);
-			overallProcess = overallProcess.then(fetchImage)
-			.then(
-				function(innerNumber){return (img)=>Promise.all([...Array(innerNumber).keys()].map(i => addImageToDoc(doc)(img)));}(amount),
-				function(line){return () => failedLines.push(line);} (regex_result[0])
-			);
-
+				? (function (url) {
+						return function () {
+							return requestArrayBuffer(url);
+						};
+					})(directUrl)
+				: getImageUrl(cardToken, versionNumber, preferDb, parsed.override);
+			overallProcess = overallProcess
+				.then(fetchImage)
+				.then(
+					function (innerNumber) {
+						return function (img) {
+							return Promise.all(
+								[...Array(innerNumber).keys()].map(function () {
+									return addImageToDoc(doc)(img);
+								})
+							);
+						};
+					}(amount),
+					function (line) {
+						return function () {
+							failedLines.push(line);
+						};
+					}(lines[i].trim())
+				);
 		}
 	}
 	
