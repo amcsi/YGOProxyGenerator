@@ -6,7 +6,7 @@
   }
 })(typeof self !== 'undefined' ? self : this, function () {
   var YGOPRODECK_CARDS_PREFIX = 'https://images.ygoprodeck.com/images/cards/';
-  var CLOUDINARY_UPLOAD_PREFIX = 'https://res.cloudinary.com/drkxqkguu/image/upload/q_auto,f_auto,h_520/yugioh/';
+  var CLOUDINARY_UPLOAD_PREFIX = 'https://res.cloudinary.com/drkxqkguu/image/upload/yugioh/';
 
   function extractDirectImageUrl(cardText) {
     var match = String(cardText).match(/https?:\/\/\S+/i);
