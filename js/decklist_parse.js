@@ -13,6 +13,56 @@
     return match ? match[0] : null;
   }
 
+  function parseDecklistLine(line) {
+    var trimmed = String(line).trim();
+    var amount = 1;
+    var rest = trimmed;
+    var qtyMatch = trimmed.match(/^([1-9][0-9]*)\s+(.*)$/);
+    if (qtyMatch) {
+      amount = parseInt(qtyMatch[1], 10);
+      rest = qtyMatch[2];
+    }
+
+    var directUrl = extractDirectImageUrl(rest);
+    if (directUrl) {
+      return {
+        amount: amount,
+        cardNameOrId: rest,
+        artIndex: 0,
+        override: null,
+        directUrl: directUrl
+      };
+    }
+
+    var tags = [];
+    var tagMatch;
+    var tagPattern = /^(.*?)\s*\[(db|ypd|\d+)\]\s*$/i;
+    while ((tagMatch = rest.match(tagPattern))) {
+      tags.unshift(tagMatch[2]);
+      rest = tagMatch[1].replace(/\s+$/, '');
+    }
+
+    var artIndex = 0;
+    var override = null;
+    for (var i = 0; i < tags.length; i++) {
+      var tag = tags[i];
+      var lower = tag.toLowerCase();
+      if (lower === 'db' || lower === 'ypd') {
+        override = lower;
+      } else {
+        artIndex = parseInt(tag, 10);
+      }
+    }
+
+    return {
+      amount: amount,
+      cardNameOrId: rest.replace(/^\s+|\s+$/g, ''),
+      artIndex: artIndex,
+      override: override,
+      directUrl: null
+    };
+  }
+
   function isOriginalDejauxvueHost(locationLike) {
     if (locationLike === undefined) {
       locationLike = typeof location !== 'undefined' ? location : null;
@@ -33,6 +83,7 @@
 
   return {
     extractDirectImageUrl: extractDirectImageUrl,
+    parseDecklistLine: parseDecklistLine,
     isOriginalDejauxvueHost: isOriginalDejauxvueHost,
     rewriteYgoProDeckImageUrl: rewriteYgoProDeckImageUrl
   };
