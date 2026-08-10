@@ -40,6 +40,9 @@
 			
 			<input id="paper_size" type=text value="A4"/>
             <span class="papers" tooltip4="Type the ID of your desired paper size, e.g. A4 or leave empty for letter-size">Paper size for output pdf, use identifiers from <a href="https://pdfkit.org/docs/paper_sizes.html">pdfkit paper_sizes</a> </span>
+
+            <input id="prefer_duelingbook_images" type="checkbox" checked />
+            <span class="preferdb">Prefer DuelingBook images</span>
           </div>
         </div>
 
@@ -54,7 +57,11 @@
             Enter card name or 8-digit card-ID:<br>
             Dark Magician <br>
             74677422 <br> <br>
-            For card names/IDs, the app tries to grab images from DuelingBook first, then falls back to YGOProDeck.<br> <br>
+            Use the "Prefer DuelingBook images" checkbox to choose the default source (saved in this browser).<br>
+            On failure the other source is tried. Default art may use a YGOProDeck URL built from the DuelingBook passcode.<br>
+            Override per line with [db] or [ypd] (can combine with art index):<br>
+            Bystial Druiswurm [ypd]<br>
+            3 Cyber Dragon [1] [db]<br> <br>
             Set the quantity before the name/ID: <br>
             3 Cyber Dragon <br>
             3 89631139 <br> <br>
@@ -73,7 +80,7 @@
     </div>
     
     <footer>
-      Card images from <a href="https://www.duelingbook.com/">DuelingBook</a> (tried first) and <a href="https://db.ygoprodeck.com/api-guide/">YGOProDeck</a> </br>
+      Card images from <a href="https://www.duelingbook.com/">DuelingBook</a> and <a href="https://db.ygoprodeck.com/api-guide/">YGOProDeck</a> (order follows the setting / per-line [db]/[ypd] tags) </br>
       Your feedback and questions are much appreciated: <a href="https://github.com/amcsi/YGOProxyGenerator/issues">Give feedback or ask questions</a> </br>
       Originally created by <a href="https://dejauxvue.github.io/YGOProxyGenerator/html/index.html">Dejauxvue</a>
     </footer>

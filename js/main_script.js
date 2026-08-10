@@ -227,8 +227,10 @@ function generateProxies(){
 			var versionNumber = parsed.artIndex;
 			var cardToken = parsed.cardNameOrId;
 			var directUrl = parsed.directUrl;
-			var preferDb = YGOImageSource.readPreferDb(localStorage);
-			// Temporary until Task 7 wires checkbox: reading storage is correct default path
+			var preferEl = document.getElementById('prefer_duelingbook_images');
+			var preferDb = preferEl
+				? preferEl.checked
+				: YGOImageSource.readPreferDb(localStorage);
 			var fetchImage = directUrl
 				? (function (url) {
 						return function () {
@@ -301,6 +303,17 @@ function dropHandler(ev) {
     }
   }
 }
+
+(function initPreferDuelingBookCheckbox() {
+  var el = document.getElementById('prefer_duelingbook_images');
+  if (!el) {
+    return;
+  }
+  el.checked = YGOImageSource.readPreferDb(localStorage);
+  el.addEventListener('change', function () {
+    YGOImageSource.writePreferDb(localStorage, el.checked);
+  });
+})();
 
 
 
