@@ -130,40 +130,74 @@ function loadDuelingBookIndexes() {
 }
 
 function getYgoProDeckImage(cardNameOrId, versionNumber){
+	function cardInfoThenImage(result) {
+		var data = YGOImageSource.parseYgoProDeckCardInfo(result);
+		if (!data) {
+			return Promise.reject('no-ygoprodeck-card');
+		}
+		var images = data.data[0].card_images;
+		if (!images || !images[versionNumber]) {
+			return Promise.reject('no-ygoprodeck-art');
+		}
+		return requestArrayBuffer(images[versionNumber].image_url);
+	}
+
 	return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?name=' + encodeURIComponent(cardNameOrId))
-	.catch((function(name){return (error)=>request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(name))})(cardNameOrId))
-	.catch(function(name){
-		return (error)=>
-		{
-			while(name.length < 8){
-			name = '0' +name;
-			}
-		return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(name));}
-	}(cardNameOrId))
-	.then(function (result){
-		var data = JSON.parse(result);
-		console.log('requesting result');
-		console.log(data);
-		return requestArrayBuffer(data.data[0].card_images[versionNumber].image_url);
+	.then(cardInfoThenImage)
+	.catch(function () {
+		return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(cardNameOrId))
+			.then(cardInfoThenImage);
+	})
+	.catch(function () {
+		var padded = String(cardNameOrId);
+		while (padded.length < 8) {
+			padded = '0' + padded;
+		}
+		return request('https://db.ygoprodeck.com/api/v7/cardinfo.php?id=' + encodeURIComponent(padded))
+			.then(cardInfoThenImage);
 	});
 }
 
-function getImageUrl(cardNameOrId, versionNumber){
-	return ()=>{
-		return loadDuelingBookIndexes()
-		.then(function (indexes) {
-			var matches = YGODuelingBook.findMatches(indexes, cardNameOrId);
-			var row = matches[versionNumber];
-			if (!row) {
-				return Promise.reject('no-duelingbook-match');
-			}
-			console.log('duelingbook match', row);
-			return requestArrayBuffer(YGODuelingBook.imageUrlForRow(row));
-		})
-		.catch(function () {
-			return getYgoProDeckImage(cardNameOrId, versionNumber);
-		});
-	};
+function runImageAttempts(attempts) {
+  var chain = Promise.reject(new Error('no-attempts'));
+  for (var i = 0; i < attempts.length; i++) {
+    (function (attempt) {
+      chain = chain.catch(function () {
+        if (attempt.type === 'duelingbook' || attempt.type === 'ygoprodeck-direct') {
+          return requestArrayBuffer(attempt.url);
+        }
+        if (attempt.type === 'ygoprodeck-api') {
+          return getYgoProDeckImage(attempt.cardNameOrId, attempt.artIndex);
+        }
+        return Promise.reject(new Error('unknown-attempt'));
+      });
+    })(attempts[i]);
+  }
+  return chain;
+}
+
+function getImageUrl(cardNameOrId, versionNumber, preferDb, override) {
+  return function () {
+    return loadDuelingBookIndexes()
+      .then(function (indexes) {
+        return indexes;
+      })
+      .catch(function () {
+        return null;
+      })
+      .then(function (indexes) {
+        var attempts = YGOImageSource.resolveAttempts({
+          cardNameOrId: cardNameOrId,
+          artIndex: versionNumber,
+          preferDb: preferDb,
+          override: override,
+          dbIndexes: indexes,
+          findMatches: YGODuelingBook.findMatches,
+          imageUrlForRow: YGODuelingBook.imageUrlForRow
+        });
+        return runImageAttempts(attempts);
+      });
+  };
 }
 
 
@@ -197,29 +231,41 @@ function generateProxies(){
 			continue;
 		}
 
-		
-		//var regex_id_nr = 
-		var regex_name = /^([1-9][0-9]* )?(.+?)(?: ?\[([0-9]+)\])?\s*$/;
-		var regex_result = regex_name.exec(lines[i].trim());
-		if(regex_result){
-			var amount = regex_result[1] === undefined ? 1 : parseInt(regex_result[1]);
-			var versionNumber = regex_result[3] === undefined ? 0 : parseInt(regex_result[3]);
-			var cardToken = regex_result[2];
-			var directUrl = YGODecklistParse.extractDirectImageUrl(cardToken);
-			console.log(lines[i]);
-			console.log(regex_result);
-			console.log("amount: " + amount);
-			console.log("versionNumber: " + versionNumber);
-			console.log("directUrl: " + directUrl);
+		var parsed = YGODecklistParse.parseDecklistLine(lines[i]);
+		if (parsed && (parsed.cardNameOrId !== '' || parsed.directUrl)) {
+			var amount = parsed.amount;
+			var versionNumber = parsed.artIndex;
+			var cardToken = parsed.cardNameOrId;
+			var directUrl = parsed.directUrl;
+			var preferEl = document.getElementById('prefer_duelingbook_images');
+			var preferDb = preferEl
+				? preferEl.checked
+				: YGOImageSource.readPreferDb(localStorage);
 			var fetchImage = directUrl
-				? (function(url){ return function(){ return requestArrayBuffer(url); }; })(directUrl)
-				: getImageUrl(cardToken, versionNumber);
-			overallProcess = overallProcess.then(fetchImage)
-			.then(
-				function(innerNumber){return (img)=>Promise.all([...Array(innerNumber).keys()].map(i => addImageToDoc(doc)(img)));}(amount),
-				function(line){return () => failedLines.push(line);} (regex_result[0])
-			);
-
+				? (function (url) {
+						return function () {
+							return requestArrayBuffer(url);
+						};
+					})(directUrl)
+				: getImageUrl(cardToken, versionNumber, preferDb, parsed.override);
+			overallProcess = overallProcess
+				.then(fetchImage)
+				.then(
+					function (innerNumber) {
+						return function (img) {
+							return Promise.all(
+								[...Array(innerNumber).keys()].map(function () {
+									return addImageToDoc(doc)(img);
+								})
+							);
+						};
+					}(amount),
+					function (line) {
+						return function () {
+							failedLines.push(line);
+						};
+					}(lines[i].trim())
+				);
 		}
 	}
 	
@@ -267,6 +313,17 @@ function dropHandler(ev) {
     }
   }
 }
+
+(function initPreferDuelingBookCheckbox() {
+  var el = document.getElementById('prefer_duelingbook_images');
+  if (!el) {
+    return;
+  }
+  el.checked = YGOImageSource.readPreferDb(localStorage);
+  el.addEventListener('change', function () {
+    YGOImageSource.writePreferDb(localStorage, el.checked);
+  });
+})();
 
 
 

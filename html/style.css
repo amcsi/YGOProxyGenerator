@@ -28,7 +28,7 @@ header {
 
 /* Colors */
 
-#mobilehowto, [tooltip1]::after, [tooltip2]::after, [tooltip3]::after,[tooltip4]::after, button {
+#mobilehowto, [tooltip1]::after, [tooltip2]::after, [tooltip3]::after,[tooltip4]::after, [tooltip5]::after, button {
 color: var(--darkblue);
 }
 header, body {
@@ -47,7 +47,7 @@ input[type=text] {
   color: var(--orange);
 }
 
-#mobilehowto, [tooltip1]::after, [tooltip2]::after, [tooltip3]::after,[tooltip4]::after, button, button::before, button:hover {
+#mobilehowto, [tooltip1]::after, [tooltip2]::after, [tooltip3]::after,[tooltip4]::after, [tooltip5]::after, button, button::before, button:hover {
   background: var(--orange);
 }
 
@@ -150,7 +150,8 @@ footer {
   'card_scale scale'
   'margin_cards marginc'
   'margin_document margind'
-  'paper_size papers';
+  'paper_size papers'
+  'prefer_duelingbook_images preferdb';
   grid-auto-columns: 1fr 10fr;
 }
 
@@ -169,8 +170,12 @@ footer {
   grid-area: paper_size;
 }
 
+#prefer_duelingbook_images {
+  grid-area: prefer_duelingbook_images;
+}
 
-.scale, .marginc, .margind, .papers{
+
+.scale, .marginc, .margind, .papers, .preferdb{
   position: relative;
   top: 0.4rem;
   cursor: help;
@@ -190,6 +195,10 @@ footer {
 
 .papers {
   grid-area: papers;
+}
+
+.preferdb {
+  grid-area: preferdb;
 }
 
 
@@ -234,7 +243,7 @@ input[type=text] {
 
 /* Tooltips */
 
-[tooltip1]::after, [tooltip2]::after, [tooltip3]::after, [tooltip4]::after {
+[tooltip1]::after, [tooltip2]::after, [tooltip3]::after, [tooltip4]::after, [tooltip5]::after {
   text-align: center;
   box-sizing: border-box;
   padding: 10px;
@@ -268,7 +277,11 @@ input[type=text] {
   content: attr(tooltip4);
 }
 
-[tooltip1]:hover::after, [tooltip2]:hover::after, [tooltip3]:hover::after, [tooltip4]:hover::after {
+[tooltip5]::after {
+  content: attr(tooltip5);
+}
+
+[tooltip1]:hover::after, [tooltip2]:hover::after, [tooltip3]:hover::after, [tooltip4]:hover::after, [tooltip5]:hover::after {
   visibility: visible;
   opacity: 1;
   transform: translateY(0);
@@ -408,10 +421,12 @@ button:active {
     'margind'
     'margin_document'
 	'papers'
-	'paper_size';
+	'paper_size'
+	'preferdb'
+	'prefer_duelingbook_images';
   }
 
-  .scale, .marginc, .margind, .papers{
+  .scale, .marginc, .margind, .papers, .preferdb{
     position: relative;
     top: 0.5rem;
     margin-bottom: 0.5rem;
@@ -419,6 +434,12 @@ button:active {
     font-size: 3rem;
     text-align: center;
     max-width: 40rem;
+  }
+
+  #prefer_duelingbook_images {
+    width: auto;
+    height: auto;
+    margin: 0.25rem;
   }
 
 
@@ -449,7 +470,7 @@ button:active {
   
   /* Tooltips */
 
-  [tooltip1]::after, [tooltip2]::after, [tooltip3]::after, [tooltip4]::after {
+  [tooltip1]::after, [tooltip2]::after, [tooltip3]::after, [tooltip4]::after, [tooltip5]::after {
     display: none;
   }
 
